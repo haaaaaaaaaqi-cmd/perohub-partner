@@ -24,6 +24,9 @@
     :edit-peer="peerStore.editPeer"
     @update:open="handleDialogOpen"
   />
+
+  <!-- 卡片显示设置弹窗 -->
+  <CardFieldsDialog />
 </template>
 
 <script setup>
@@ -33,6 +36,7 @@ import PeerToolbar from './Toolbar.vue'
 import PeerContent from './Content.vue'
 import PeerDetailPanel from './DetailPanel.vue'
 import AddPeerDialog from './AddPeerDialog.vue'
+import CardFieldsDialog from './CardFieldsDialog.vue'
 import { usePeerStore } from '@/store/peer'
 
 const peerStore = usePeerStore()

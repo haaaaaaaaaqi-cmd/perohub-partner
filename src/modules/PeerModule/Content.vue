@@ -139,12 +139,16 @@
                     class="w-3.5 h-3.5 text-amber-500 flex-shrink-0 fill-amber-500"
                   />
                 </div>
+                <!-- 别名 -->
+                <span v-if="showField('alias') && peer.alias" class="text-[11px] text-muted-foreground truncate block">
+                  {{ peer.alias }}
+                </span>
                 <!-- 类型 + 分类 -->
-                <div class="flex items-center gap-1.5 mt-0.5">
-                  <Badge variant="outline" class="text-[10px]">
+                <div v-if="showField('type') || showField('category')" class="flex items-center gap-1.5 mt-0.5">
+                  <Badge v-if="showField('type')" variant="outline" class="text-[10px]">
                     {{ getTypeIcon(peer.type) }} {{ getTypeLabel(peer.type) }}
                   </Badge>
-                  <span class="text-xs text-muted-foreground truncate">
+                  <span v-if="showField('category')" class="text-xs text-muted-foreground truncate">
                     {{ getCategoryLabel(peer.category) }}
                   </span>
                 </div>
@@ -158,10 +162,21 @@
               </button>
             </div>
 
+            <!-- 真实姓名 -->
+            <div v-if="showField('realName') && peer.realName" class="text-xs text-muted-foreground mb-2">
+              <span class="text-muted-foreground/60">真实姓名：</span>{{ peer.realName }}
+            </div>
+
+            <!-- 网站 -->
+            <div v-if="showField('website') && peer.website" class="text-xs text-muted-foreground mb-2 flex items-center gap-1">
+              <Globe class="w-3 h-3 flex-shrink-0" />
+              <span class="truncate">{{ peer.website }}</span>
+            </div>
+
             <!-- 标签 -->
-            <div class="flex flex-wrap gap-1 mb-3">
+            <div v-if="showField('tags') && peer.tags?.length" class="flex flex-wrap gap-1 mb-3">
               <Badge
-                v-for="tag in peer.tags?.slice(0, 3)"
+                v-for="tag in peer.tags.slice(0, 3)"
                 :key="tag"
                 variant="secondary"
                 class="text-[10px]"
@@ -171,21 +186,28 @@
             </div>
 
             <!-- 描述 -->
-            <p class="text-xs text-muted-foreground line-clamp-2 mb-3">{{ peer.desc }}</p>
+            <p v-if="showField('desc') && peer.desc" class="text-xs text-muted-foreground line-clamp-2 mb-3">{{ peer.desc }}</p>
 
-            <!-- 底部信息：城市 + 粉丝 + 评分 -->
-            <div class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border">
-              <div class="flex items-center gap-1">
+            <!-- 底部信息 -->
+            <div
+              v-if="hasFooterFields"
+              class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border"
+            >
+              <div v-if="showField('city')" class="flex items-center gap-1">
                 <MapPin class="w-3 h-3" />
                 <span>{{ peer.city || '-' }}</span>
               </div>
-              <div class="flex items-center gap-1">
+              <div v-if="showField('followers')" class="flex items-center gap-1">
                 <Users class="w-3 h-3" />
                 <span>{{ formatFollowers(peer.followers) }}</span>
               </div>
-              <div class="flex items-center gap-1">
+              <div v-if="showField('rating')" class="flex items-center gap-1">
                 <Star class="w-3 h-3 text-amber-500 fill-amber-500" />
                 <span class="tabular-nums font-medium text-foreground/80">{{ getRatingScore(peer.rating) }}</span>
+              </div>
+              <div v-if="showField('createdAt')" class="flex items-center gap-1">
+                <Calendar class="w-3 h-3" />
+                <span class="tabular-nums">{{ peer.createdAt }}</span>
               </div>
             </div>
           </div>
@@ -206,7 +228,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Star, MapPin, Users } from 'lucide-vue-next'
+import { Star, MapPin, Users, Globe, Calendar } from 'lucide-vue-next'
 import { useAppStore } from '@/store/app'
 import { usePeerStore } from '@/store/peer'
 import { getAvatarDataUri } from '@/lib/utils'
@@ -222,6 +244,19 @@ function onAvatarError(e, peer) {
     e.target.src = getAvatarDataUri(peer.name, peer.id)
   }
 }
+
+// 当前分类的卡片显示字段
+const cardFields = computed(() => peerStore.currentCardFields)
+
+// 判断某字段是否显示
+function showField(fieldId) {
+  return cardFields.value.includes(fieldId)
+}
+
+// 底部信息栏是否有显示字段
+const hasFooterFields = computed(() =>
+  ['city', 'followers', 'rating', 'createdAt'].some(f => showField(f))
+)
 
 // 拍档列表
 const peers = computed(() => peerStore.currentPeers)

@@ -38,6 +38,25 @@ const CATEGORY_GROUPS = [
   { id: 'company', label: '组织', icon: '🏢' }
 ]
 
+// 卡片可显示字段配置（id、标签、图标）
+// 核心字段（头像、名称、收藏按钮）始终显示，不可关闭
+const CARD_FIELDS = [
+  { id: 'alias', label: '别名', icon: 'AtSign' },
+  { id: 'type', label: '类型', icon: 'User' },
+  { id: 'category', label: '分类', icon: 'Folder' },
+  { id: 'tags', label: '标签', icon: 'Tag' },
+  { id: 'desc', label: '描述', icon: 'FileText' },
+  { id: 'city', label: '城市', icon: 'MapPin' },
+  { id: 'followers', label: '粉丝数', icon: 'Users' },
+  { id: 'rating', label: '评分', icon: 'Star' },
+  { id: 'realName', label: '真实姓名', icon: 'UserCheck' },
+  { id: 'website', label: '网站', icon: 'Globe' },
+  { id: 'createdAt', label: '入驻时间', icon: 'Calendar' }
+]
+
+// 卡片默认显示字段
+const DEFAULT_CARD_FIELDS = ['alias', 'type', 'category', 'tags', 'desc', 'city', 'followers', 'rating']
+
 // 社交媒体平台配置
 const SOCIAL_PLATFORMS = [
   { id: 'weibo', label: '微博', icon: '📱' },
@@ -723,7 +742,14 @@ export const usePeerStore = defineStore('peer', {
     // 筛选：类型 + 城市 + 标签
     filterType: '',         // '' = 全部
     filterCity: '',         // '' = 全部
-    filterTag: ''           // '' = 全部
+    filterTag: '',          // '' = 全部
+
+    // 卡片显示字段设置：{ [categoryId]: [fieldId, ...] }
+    // 未配置的分类使用 DEFAULT_CARD_FIELDS
+    cardFields: {},
+
+    // 卡片显示设置弹窗
+    showCardFieldsDialog: false
   }),
 
   getters: {
@@ -834,6 +860,16 @@ export const usePeerStore = defineStore('peer', {
       return !!(state.filterType || state.filterCity || state.filterTag)
     },
 
+    // 卡片可选字段配置
+    cardFieldConfig() {
+      return CARD_FIELDS
+    },
+
+    // 当前分类的卡片显示字段
+    currentCardFields(state) {
+      return state.cardFields[state.currentCategory] || [...DEFAULT_CARD_FIELDS]
+    },
+
     // 计算评分（豆瓣式：总星数/评分数*2，满分10）
     getRatingScore: () => (rating) => {
       if (!rating || !rating.count) return 0
@@ -903,6 +939,9 @@ export const usePeerStore = defineStore('peer', {
           if (Array.isArray(data.hiddenGroups)) {
             this.hiddenGroups = data.hiddenGroups
           }
+          if (data.cardFields && typeof data.cardFields === 'object') {
+            this.cardFields = data.cardFields
+          }
         }
       } catch (e) {}
     },
@@ -914,7 +953,8 @@ export const usePeerStore = defineStore('peer', {
           order: this.categoryOrder,
           hidden: this.hiddenCategories,
           groupOrder: this.groupOrder,
-          hiddenGroups: this.hiddenGroups
+          hiddenGroups: this.hiddenGroups,
+          cardFields: this.cardFields
         }))
       } catch (e) {}
     },
@@ -966,6 +1006,7 @@ export const usePeerStore = defineStore('peer', {
       this.hiddenCategories = []
       this.groupOrder = CATEGORY_GROUPS.map(g => g.id)
       this.hiddenGroups = []
+      this.cardFields = {}
       this.saveCategorySettings()
     },
 
@@ -1109,6 +1150,33 @@ export const usePeerStore = defineStore('peer', {
     // 设置视图模式
     setViewMode(mode) {
       this.viewMode = mode
+    },
+
+    // ===== 卡片显示字段设置 =====
+    // 获取指定分类的卡片显示字段
+    getCardFields(categoryId) {
+      return this.cardFields[categoryId] || [...DEFAULT_CARD_FIELDS]
+    },
+
+    // 设置指定分类的卡片显示字段
+    setCardFields(categoryId, fields) {
+      this.cardFields = { ...this.cardFields, [categoryId]: fields }
+      this.saveCategorySettings()
+    },
+
+    // 重置指定分类的卡片显示字段为默认
+    resetCardFields(categoryId) {
+      const { [categoryId]: _, ...rest } = this.cardFields
+      this.cardFields = rest
+      this.saveCategorySettings()
+    },
+
+    // 打开/关闭卡片字段设置弹窗
+    openCardFieldsDialog() {
+      this.showCardFieldsDialog = true
+    },
+    closeCardFieldsDialog() {
+      this.showCardFieldsDialog = false
     },
 
     // 设置排序字段

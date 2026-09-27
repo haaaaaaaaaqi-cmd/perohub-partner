@@ -157,6 +157,13 @@
         </DropdownMenuItem>
       </DropdownMenu>
 
+      <!-- 卡片显示设置 -->
+      <Tooltip content="卡片显示设置">
+        <Button variant="secondary" size="icon" class="h-8 w-8" @click="openCardFieldsDialog">
+          <Eye class="w-4 h-4" />
+        </Button>
+      </Tooltip>
+
       <Separator orientation="vertical" class="h-6" />
 
       <!-- 添加按钮 -->
@@ -188,7 +195,7 @@ import { computed, markRaw } from 'vue'
 import {
   Menu, Search, ArrowUpDown, Filter, UserPlus, PanelRight,
   LayoutGrid, List, Check, User, Users, Star, Calendar,
-  MapPin, Tag, X, ArrowUpAZ, ArrowDownAZ
+  MapPin, Tag, X, ArrowUpAZ, ArrowDownAZ, Eye
 } from 'lucide-vue-next'
 import { useAppStore } from '@/store/app'
 import { usePeerStore } from '@/store/peer'
@@ -296,5 +303,10 @@ function clearAllFilters() {
 // 打开添加弹窗
 function openAddDialog() {
   peerStore.openAddDialog()
+}
+
+// 打开卡片显示设置弹窗
+function openCardFieldsDialog() {
+  peerStore.openCardFieldsDialog()
 }
 </script>
