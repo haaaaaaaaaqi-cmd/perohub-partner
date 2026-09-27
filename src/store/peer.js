@@ -38,24 +38,22 @@ const CATEGORY_GROUPS = [
   { id: 'company', label: '组织', icon: '🏢' }
 ]
 
-// 卡片可显示字段配置（id、标签、图标）
-// 核心字段（头像、名称、收藏按钮）始终显示，不可关闭
+// 卡片可选显示字段配置（头像、名称为固定头部，不参与配置）
 const CARD_FIELDS = [
   { id: 'alias', label: '别名', icon: 'AtSign' },
   { id: 'type', label: '类型', icon: 'User' },
-  { id: 'category', label: '分类', icon: 'Folder' },
-  { id: 'tags', label: '标签', icon: 'Tag' },
-  { id: 'desc', label: '描述', icon: 'FileText' },
+  { id: 'category', label: '分类', icon: 'Tag' },
   { id: 'city', label: '城市', icon: 'MapPin' },
   { id: 'followers', label: '粉丝数', icon: 'Users' },
   { id: 'rating', label: '评分', icon: 'Star' },
-  { id: 'realName', label: '真实姓名', icon: 'UserCheck' },
-  { id: 'website', label: '网站', icon: 'Globe' },
+  { id: 'tags', label: '标签', icon: 'Hash' },
+  { id: 'desc', label: '描述', icon: 'FileText' },
+  { id: 'website', label: '网址', icon: 'Globe' },
   { id: 'createdAt', label: '入驻时间', icon: 'Calendar' }
 ]
 
-// 卡片默认显示字段
-const DEFAULT_CARD_FIELDS = ['alias', 'type', 'category', 'tags', 'desc', 'city', 'followers', 'rating']
+// 分类默认卡片显示字段
+const DEFAULT_CARD_FIELDS = ['type', 'category', 'city', 'followers', 'rating', 'tags', 'desc']
 
 // 社交媒体平台配置
 const SOCIAL_PLATFORMS = [
@@ -720,11 +718,17 @@ export const usePeerStore = defineStore('peer', {
     groupOrder: CATEGORY_GROUPS.map(g => g.id),
     hiddenGroups: [],
 
+    // 分类卡片字段配置：{ catId: [fieldId, ...] }
+    categoryCardFields: {},
+
     // 分类管理弹窗
     showCategorySettings: false,
 
     // 社交平台配置
     socialPlatforms: SOCIAL_PLATFORMS,
+
+    // 卡片可选字段配置
+    cardFields: CARD_FIELDS,
 
     // 添加弹窗显示状态
     showAddDialog: false,
@@ -743,10 +747,6 @@ export const usePeerStore = defineStore('peer', {
     filterType: '',         // '' = 全部
     filterCity: '',         // '' = 全部
     filterTag: '',          // '' = 全部
-
-    // 卡片显示字段设置：{ [categoryId]: [fieldId, ...] }
-    // 未配置的分类使用 DEFAULT_CARD_FIELDS
-    cardFields: {},
 
     // 卡片显示设置弹窗
     showCardFieldsDialog: false
@@ -865,11 +865,6 @@ export const usePeerStore = defineStore('peer', {
       return CARD_FIELDS
     },
 
-    // 当前分类的卡片显示字段
-    currentCardFields(state) {
-      return state.cardFields[state.currentCategory] || [...DEFAULT_CARD_FIELDS]
-    },
-
     // 计算评分（豆瓣式：总星数/评分数*2，满分10）
     getRatingScore: () => (rating) => {
       if (!rating || !rating.count) return 0
@@ -940,7 +935,7 @@ export const usePeerStore = defineStore('peer', {
             this.hiddenGroups = data.hiddenGroups
           }
           if (data.cardFields && typeof data.cardFields === 'object') {
-            this.cardFields = data.cardFields
+            this.categoryCardFields = { ...data.cardFields }
           }
         }
       } catch (e) {}
@@ -954,7 +949,7 @@ export const usePeerStore = defineStore('peer', {
           hidden: this.hiddenCategories,
           groupOrder: this.groupOrder,
           hiddenGroups: this.hiddenGroups,
-          cardFields: this.cardFields
+          cardFields: this.categoryCardFields
         }))
       } catch (e) {}
     },
@@ -1006,8 +1001,28 @@ export const usePeerStore = defineStore('peer', {
       this.hiddenCategories = []
       this.groupOrder = CATEGORY_GROUPS.map(g => g.id)
       this.hiddenGroups = []
-      this.cardFields = {}
+      this.categoryCardFields = {}
       this.saveCategorySettings()
+    },
+
+    // ===== 分类卡片字段配置 =====
+
+    // 获取某分类的卡片显示字段（未配置时返回默认）
+    getCategoryCardFields(catId) {
+      const stored = this.categoryCardFields[catId]
+      if (Array.isArray(stored)) return stored
+      return [...DEFAULT_CARD_FIELDS]
+    },
+
+    // 更新某分类的卡片显示字段
+    updateCategoryCardFields(catId, fields) {
+      this.categoryCardFields[catId] = fields
+      this.saveCategorySettings()
+    },
+
+    // 获取当前分类的卡片字段（用于内容页渲染）
+    currentCardFields() {
+      return this.getCategoryCardFields(this.currentCategory)
     },
 
     // ===== 分栏排序/显隐 =====
@@ -1155,19 +1170,18 @@ export const usePeerStore = defineStore('peer', {
     // ===== 卡片显示字段设置 =====
     // 获取指定分类的卡片显示字段
     getCardFields(categoryId) {
-      return this.cardFields[categoryId] || [...DEFAULT_CARD_FIELDS]
+      return this.getCategoryCardFields(categoryId)
     },
 
     // 设置指定分类的卡片显示字段
     setCardFields(categoryId, fields) {
-      this.cardFields = { ...this.cardFields, [categoryId]: fields }
-      this.saveCategorySettings()
+      this.updateCategoryCardFields(categoryId, fields)
     },
 
     // 重置指定分类的卡片显示字段为默认
     resetCardFields(categoryId) {
-      const { [categoryId]: _, ...rest } = this.cardFields
-      this.cardFields = rest
+      const { [categoryId]: _, ...rest } = this.categoryCardFields
+      this.categoryCardFields = rest
       this.saveCategorySettings()
     },
 

@@ -123,8 +123,8 @@
             :class="{ 'ring-2 ring-primary': selectedPeerId === peer.id }"
             @click="selectPeer(peer)"
           >
-            <!-- 头部：头像 + 名称 + 收藏按钮 -->
-            <div class="flex items-start gap-3 mb-3">
+            <!-- 头部：头像 + 名称 + 收藏按钮（固定） -->
+            <div class="flex items-start gap-3 mb-2">
               <img
                 :src="peer.avatar"
                 :alt="peer.name"
@@ -140,15 +140,17 @@
                   />
                 </div>
                 <!-- 别名 -->
-                <span v-if="showField('alias') && peer.alias" class="text-[11px] text-muted-foreground truncate block">
-                  {{ peer.alias }}
-                </span>
+                <div v-if="showField('alias') && peer.alias" class="flex items-center gap-1 mt-0.5">
+                  <AtSign class="w-3 h-3 text-muted-foreground flex-shrink-0" />
+                  <span class="text-xs text-muted-foreground truncate">{{ peer.alias }}</span>
+                </div>
                 <!-- 类型 + 分类 -->
-                <div v-if="showField('type') || showField('category')" class="flex items-center gap-1.5 mt-0.5">
+                <div v-if="showField('type') || showField('category')" class="flex items-center gap-1.5 mt-1">
                   <Badge v-if="showField('type')" variant="outline" class="text-[10px]">
                     {{ getTypeIcon(peer.type) }} {{ getTypeLabel(peer.type) }}
                   </Badge>
-                  <span v-if="showField('category')" class="text-xs text-muted-foreground truncate">
+                  <span v-if="showField('category')" class="flex items-center gap-0.5 text-xs text-muted-foreground truncate">
+                    <Tag v-if="showField('type')" class="w-2.5 h-2.5" />
                     {{ getCategoryLabel(peer.category) }}
                   </span>
                 </div>
@@ -174,7 +176,7 @@
             </div>
 
             <!-- 标签 -->
-            <div v-if="showField('tags') && peer.tags?.length" class="flex flex-wrap gap-1 mb-3">
+            <div v-if="showField('tags') && peer.tags?.length" class="flex flex-wrap gap-1 mb-2">
               <Badge
                 v-for="tag in peer.tags.slice(0, 3)"
                 :key="tag"
@@ -183,15 +185,16 @@
               >
                 {{ tag }}
               </Badge>
+              <span v-if="peer.tags.length > 3" class="text-[10px] text-muted-foreground">+{{ peer.tags.length - 3 }}</span>
             </div>
 
             <!-- 描述 -->
-            <p v-if="showField('desc') && peer.desc" class="text-xs text-muted-foreground line-clamp-2 mb-3">{{ peer.desc }}</p>
+            <p v-if="showField('desc') && peer.desc" class="text-xs text-muted-foreground line-clamp-2 mb-2">{{ peer.desc }}</p>
 
-            <!-- 底部信息 -->
+            <!-- 底部信息：城市 + 粉丝 + 评分 + 网址 + 入驻时间（动态） -->
             <div
-              v-if="hasFooterFields"
-              class="flex items-center justify-between text-xs text-muted-foreground pt-2 border-t border-border"
+              v-if="hasBottomFields"
+              class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground pt-2 border-t border-border"
             >
               <div v-if="showField('city')" class="flex items-center gap-1">
                 <MapPin class="w-3 h-3" />
@@ -204,6 +207,10 @@
               <div v-if="showField('rating')" class="flex items-center gap-1">
                 <Star class="w-3 h-3 text-amber-500 fill-amber-500" />
                 <span class="tabular-nums font-medium text-foreground/80">{{ getRatingScore(peer.rating) }}</span>
+              </div>
+              <div v-if="showField('website') && peer.website" class="flex items-center gap-1 max-w-[120px]">
+                <Globe class="w-3 h-3 flex-shrink-0" />
+                <span class="truncate">{{ peer.website }}</span>
               </div>
               <div v-if="showField('createdAt')" class="flex items-center gap-1">
                 <Calendar class="w-3 h-3" />
@@ -228,7 +235,7 @@
 
 <script setup>
 import { computed } from 'vue'
-import { Star, MapPin, Users, Globe, Calendar } from 'lucide-vue-next'
+import { Star, MapPin, Users, Globe, Calendar, AtSign, Tag } from 'lucide-vue-next'
 import { useAppStore } from '@/store/app'
 import { usePeerStore } from '@/store/peer'
 import { getAvatarDataUri } from '@/lib/utils'
@@ -245,17 +252,17 @@ function onAvatarError(e, peer) {
   }
 }
 
-// 当前分类的卡片显示字段
-const cardFields = computed(() => peerStore.currentCardFields)
+// 当前分类的卡片显示字段配置
+const cardFields = computed(() => peerStore.currentCardFields())
 
 // 判断某字段是否显示
 function showField(fieldId) {
   return cardFields.value.includes(fieldId)
 }
 
-// 底部信息栏是否有显示字段
-const hasFooterFields = computed(() =>
-  ['city', 'followers', 'rating', 'createdAt'].some(f => showField(f))
+// 底部信息栏是否有任何字段需要显示
+const hasBottomFields = computed(() =>
+  ['city', 'followers', 'rating', 'website', 'createdAt'].some(f => showField(f))
 )
 
 // 拍档列表

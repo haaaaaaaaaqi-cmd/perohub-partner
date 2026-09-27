@@ -121,6 +121,48 @@
                 <Eye v-if="!isHidden(catId)" class="w-3.5 h-3.5" />
                 <EyeOff v-else class="w-3.5 h-3.5" />
               </button>
+
+              <!-- 卡片字段配置 -->
+              <button
+                class="p-0.5 rounded transition-colors flex-shrink-0"
+                :class="expandedCardCat === catId ? 'text-primary bg-primary/10' : 'text-muted-foreground hover:text-foreground hover:bg-accent'"
+                title="配置卡片显示内容"
+                @click.stop="toggleCardFields(catId)"
+              >
+                <LayoutGrid class="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <!-- 卡片字段配置面板（展开时显示） -->
+            <div
+              v-if="expandedCardCat === catId"
+              class="ml-6 mb-2 p-2.5 rounded-md border border-border bg-muted/20"
+              @click.stop
+            >
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-medium text-foreground/80">卡片显示内容</span>
+                <button
+                  class="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  @click="resetCatCardFields(catId)"
+                >
+                  恢复默认
+                </button>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                <button
+                  v-for="field in peerStore.cardFields"
+                  :key="field.id"
+                  class="flex items-center gap-1 px-2 py-1 rounded-md text-xs border transition-colors"
+                  :class="getCatCardFields(catId).includes(field.id)
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border text-muted-foreground hover:border-primary/50'"
+                  @click="toggleCatCardField(catId, field.id)"
+                >
+                  <Check v-if="getCatCardFields(catId).includes(field.id)" class="w-3 h-3" />
+                  <span>{{ field.label }}</span>
+                </button>
+              </div>
+              <p class="text-[10px] text-muted-foreground/70 mt-1.5">头像和名称为固定显示项，不可隐藏</p>
             </div>
           </template>
         </div>
@@ -149,7 +191,7 @@
 <script setup>
 import { ref, computed } from 'vue'
 import {
-  GripVertical, ChevronUp, ChevronDown, Eye, EyeOff, RotateCcw, Check
+  GripVertical, ChevronUp, ChevronDown, Eye, EyeOff, RotateCcw, Check, LayoutGrid, X
 } from 'lucide-vue-next'
 import { usePeerStore } from '@/store/peer'
 import Dialog from '@/components/ui/Dialog.vue'
@@ -162,6 +204,36 @@ import Button from '@/components/ui/Button.vue'
 const peerStore = usePeerStore()
 
 const open = computed(() => peerStore.showCategorySettings)
+
+// 当前展开卡片字段配置的分类 ID
+const expandedCardCat = ref(null)
+
+function toggleCardFields(catId) {
+  expandedCardCat.value = expandedCardCat.value === catId ? null : catId
+}
+
+// 获取某分类的卡片字段
+function getCatCardFields(catId) {
+  return peerStore.getCategoryCardFields(catId)
+}
+
+// 切换某分类的某个卡片字段
+function toggleCatCardField(catId, fieldId) {
+  // 创建副本，避免修改原数组引用导致响应式不更新
+  const current = [...getCatCardFields(catId)]
+  const idx = current.indexOf(fieldId)
+  if (idx === -1) {
+    current.push(fieldId)
+  } else {
+    current.splice(idx, 1)
+  }
+  peerStore.updateCategoryCardFields(catId, current)
+}
+
+// 恢复某分类的卡片字段为默认
+function resetCatCardFields(catId) {
+  peerStore.updateCategoryCardFields(catId, [])
+}
 
 // ===== 分类 =====
 const categoryOrder = computed(() => peerStore.categoryOrder)
