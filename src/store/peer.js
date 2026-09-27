@@ -55,6 +55,21 @@ const CARD_FIELDS = [
 // 分类默认卡片显示字段
 const DEFAULT_CARD_FIELDS = ['type', 'category', 'city', 'followers', 'rating', 'tags', 'desc']
 
+// 详情面板可选显隐字段配置（头像、名称、别名、类型、分类、城市、简介、标签、联系方式、对接人 等基础信息固定显示，不参与配置）
+const DETAIL_FIELDS = [
+  { id: 'socialMedia', label: '社媒', types: ['person', 'company'] },
+  { id: 'followers', label: '粉丝', types: ['person', 'company'] },
+  { id: 'works', label: '作品案例', types: ['person', 'company'] },
+  { id: 'cooperations', label: '合作案例', types: ['person', 'company'] },
+  { id: 'ratingStars', label: '评星', types: ['person', 'company'] },
+  { id: 'ratingScore', label: '评分', types: ['person', 'company'] },
+  { id: 'risk', label: '风险', types: ['person', 'company'] },
+  { id: 'handlers', label: '联络人', types: ['company'] }
+]
+
+// 分类默认详情面板显示字段（全部默认显示）
+const DEFAULT_DETAIL_FIELDS = DETAIL_FIELDS.map(f => f.id)
+
 // 社交媒体平台配置
 const SOCIAL_PLATFORMS = [
   { id: 'weibo', label: '微博', icon: '📱' },
@@ -721,6 +736,9 @@ export const usePeerStore = defineStore('peer', {
     // 分类卡片字段配置：{ catId: [fieldId, ...] }
     categoryCardFields: {},
 
+    // 分类详情面板字段配置：{ catId: [fieldId, ...] }
+    categoryDetailFields: {},
+
     // 分类管理弹窗
     showCategorySettings: false,
 
@@ -732,6 +750,9 @@ export const usePeerStore = defineStore('peer', {
 
     // 添加弹窗显示状态
     showAddDialog: false,
+
+    // 添加弹窗类型：person | company（由工具栏下拉选择）
+    addDialogType: 'person',
 
     // 编辑弹窗：当前正在编辑的拍档对象
     editPeer: null,
@@ -937,6 +958,9 @@ export const usePeerStore = defineStore('peer', {
           if (data.cardFields && typeof data.cardFields === 'object') {
             this.categoryCardFields = { ...data.cardFields }
           }
+          if (data.detailFields && typeof data.detailFields === 'object') {
+            this.categoryDetailFields = { ...data.detailFields }
+          }
         }
       } catch (e) {}
     },
@@ -949,7 +973,8 @@ export const usePeerStore = defineStore('peer', {
           hidden: this.hiddenCategories,
           groupOrder: this.groupOrder,
           hiddenGroups: this.hiddenGroups,
-          cardFields: this.categoryCardFields
+          cardFields: this.categoryCardFields,
+          detailFields: this.categoryDetailFields
         }))
       } catch (e) {}
     },
@@ -1002,6 +1027,7 @@ export const usePeerStore = defineStore('peer', {
       this.groupOrder = CATEGORY_GROUPS.map(g => g.id)
       this.hiddenGroups = []
       this.categoryCardFields = {}
+      this.categoryDetailFields = {}
       this.saveCategorySettings()
     },
 
@@ -1023,6 +1049,26 @@ export const usePeerStore = defineStore('peer', {
     // 获取当前分类的卡片字段（用于内容页渲染）
     currentCardFields() {
       return this.getCategoryCardFields(this.currentCategory)
+    },
+
+    // ===== 分类详情面板字段配置 =====
+
+    // 获取某分类的详情面板显示字段（未配置时返回默认）
+    getCategoryDetailFields(catId) {
+      const stored = this.categoryDetailFields[catId]
+      if (Array.isArray(stored)) return stored
+      return [...DEFAULT_DETAIL_FIELDS]
+    },
+
+    // 更新某分类的详情面板显示字段
+    updateCategoryDetailFields(catId, fields) {
+      this.categoryDetailFields[catId] = fields
+      this.saveCategorySettings()
+    },
+
+    // 获取当前分类的详情面板字段（用于详情页渲染）
+    currentDetailFields() {
+      return this.getCategoryDetailFields(this.currentCategory)
     },
 
     // ===== 分栏排序/显隐 =====
@@ -1225,9 +1271,10 @@ export const usePeerStore = defineStore('peer', {
       this.filterTag = ''
     },
 
-    // 打开添加弹窗
-    openAddDialog() {
+    // 打开添加弹窗（type: person | company）
+    openAddDialog(type = 'person') {
       this.editPeer = null
+      this.addDialogType = type
       this.showAddDialog = true
     },
 
@@ -1282,6 +1329,7 @@ export const usePeerStore = defineStore('peer', {
         name,
         alias: data.alias || '',
         realName: data.realName || '',
+        organization: data.organization || '',
         website: data.website || '',
         type: data.type || 'person',
         category: data.category || 'artist',

@@ -166,13 +166,29 @@
 
       <Separator orientation="vertical" class="h-6" />
 
-      <!-- 添加按钮 -->
-      <Tooltip content="添加拍档">
-        <Button @click="openAddDialog">
-          <UserPlus class="w-3.5 h-3.5" />
-          添加
-        </Button>
-      </Tooltip>
+      <!-- 添加按钮（下拉选择：个人 / 组织） -->
+      <DropdownMenu align="end" :side-offset="6">
+        <template #trigger>
+          <Tooltip content="添加拍档">
+            <Button>
+              <UserPlus class="w-3.5 h-3.5" />
+              添加
+              <ChevronDown class="w-3.5 h-3.5 ml-0.5" />
+            </Button>
+          </Tooltip>
+        </template>
+        <DropdownMenuLabel>选择添加类型</DropdownMenuLabel>
+        <DropdownMenuItem @select="openAddDialog('person')">
+          <User class="w-4 h-4" />
+          <span class="flex-1">个人</span>
+          <span class="text-[10px] text-muted-foreground">画师 / 音乐人 / KOL</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem @select="openAddDialog('company')">
+          <Building2 class="w-4 h-4" />
+          <span class="flex-1">组织</span>
+          <span class="text-[10px] text-muted-foreground">友商 / 供应商 / 服务商</span>
+        </DropdownMenuItem>
+      </DropdownMenu>
 
       <!-- 详情面板切换 -->
       <Tooltip content="详情面板">
@@ -195,7 +211,7 @@ import { computed, markRaw } from 'vue'
 import {
   Menu, Search, ArrowUpDown, Filter, UserPlus, PanelRight,
   LayoutGrid, List, Check, User, Users, Star, Calendar,
-  MapPin, Tag, X, ArrowUpAZ, ArrowDownAZ, Eye
+  MapPin, Tag, X, ArrowUpAZ, ArrowDownAZ, Eye, Building2, ChevronDown
 } from 'lucide-vue-next'
 import { useAppStore } from '@/store/app'
 import { usePeerStore } from '@/store/peer'
@@ -300,9 +316,9 @@ function clearAllFilters() {
   peerStore.clearFilters()
 }
 
-// 打开添加弹窗
-function openAddDialog() {
-  peerStore.openAddDialog()
+// 打开添加弹窗（type: person | company）
+function openAddDialog(type) {
+  peerStore.openAddDialog(type)
 }
 
 // 打开卡片显示设置弹窗

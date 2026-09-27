@@ -1,6 +1,6 @@
 <template>
   <!-- 拍档内容区 -->
-  <div class="w-full h-full overflow-hidden">
+  <div class="w-full h-full overflow-hidden" @contextmenu.prevent="openEmptyMenu">
     <!-- ========== 列表视图 ========== -->
     <template v-if="viewMode === 'list'">
       <div class="h-full flex flex-col">
@@ -30,6 +30,7 @@
               class="flex items-center gap-2 px-4 h-14 cursor-pointer transition-colors hover:bg-accent/50"
               :class="{ 'bg-primary/5': selectedPeerId === peer.id }"
               @click="selectPeer(peer)"
+              @contextmenu.stop.prevent="openCardMenu($event, peer)"
             >
               <!-- 收藏 -->
               <div class="w-[36px] flex-shrink-0 text-center">
@@ -122,6 +123,7 @@
             class="bg-background border border-border rounded-lg p-4 cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
             :class="{ 'ring-2 ring-primary': selectedPeerId === peer.id }"
             @click="selectPeer(peer)"
+            @contextmenu.stop.prevent="openCardMenu($event, peer)"
           >
             <!-- 头部：头像 + 名称 + 收藏按钮（固定） -->
             <div class="flex items-start gap-3 mb-2">
@@ -230,20 +232,144 @@
         </div>
       </ScrollArea>
     </template>
+
+    <!-- ========== 右键菜单 ========== -->
+    <ContextMenu ref="contextMenuRef">
+      <!-- 卡片右键菜单 -->
+      <template v-if="contextPeer">
+        <button
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent focus:bg-accent text-left"
+          @click="handleEdit"
+        >
+          <Pencil class="w-4 h-4" />
+          <span>编辑对象</span>
+        </button>
+        <button
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent focus:bg-accent text-left"
+          @click="handleCopyLink"
+        >
+          <Link class="w-4 h-4" />
+          <span>复制链接</span>
+        </button>
+        <button
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent focus:bg-accent text-left"
+          @click="handleCopyText"
+        >
+          <Copy class="w-4 h-4" />
+          <span>复制文本</span>
+        </button>
+        <div class="my-1 h-px bg-border" />
+        <button
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent focus:bg-accent text-left text-destructive"
+          @click="handleDelete"
+        >
+          <Trash2 class="w-4 h-4" />
+          <span>删除对象</span>
+        </button>
+      </template>
+      <!-- 空白区右键菜单 -->
+      <template v-else>
+        <button
+          class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none transition-colors hover:bg-accent focus:bg-accent text-left"
+          @click="handleCreate"
+        >
+          <Plus class="w-4 h-4" />
+          <span>新建{{ currentCategoryType === 'company' ? '组织' : '个人' }}</span>
+        </button>
+      </template>
+    </ContextMenu>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
-import { Star, MapPin, Users, Globe, Calendar, AtSign, Tag } from 'lucide-vue-next'
+import { ref, computed } from 'vue'
+import { Star, MapPin, Users, Globe, Calendar, AtSign, Tag, Pencil, Link, Copy, Trash2, Plus } from 'lucide-vue-next'
 import { useAppStore } from '@/store/app'
 import { usePeerStore } from '@/store/peer'
 import { getAvatarDataUri } from '@/lib/utils'
 import Badge from '@/components/ui/Badge.vue'
 import ScrollArea from '@/components/ui/ScrollArea.vue'
+import ContextMenu from '@/components/ui/ContextMenu.vue'
 
 const appStore = useAppStore()
 const peerStore = usePeerStore()
+
+// 右键菜单相关
+const contextMenuRef = ref(null)
+const contextPeer = ref(null) // 当前右键的拍档，null 表示右键空白区
+
+// 当前分类对应的拍档类型（person / company）
+const currentCategoryType = computed(() => {
+  const cat = peerStore.categories.find(c => c.id === peerStore.currentCategory)
+  return cat?.group || 'person'
+})
+
+// 打开卡片右键菜单
+function openCardMenu(e, peer) {
+  contextPeer.value = peer
+  contextMenuRef.value?.open(e.clientX, e.clientY)
+}
+
+// 打开空白区右键菜单
+function openEmptyMenu(e) {
+  contextPeer.value = null
+  contextMenuRef.value?.open(e.clientX, e.clientY)
+}
+
+// 关闭菜单
+function closeMenu() {
+  contextMenuRef.value?.close()
+  contextPeer.value = null
+}
+
+// 编辑对象
+function handleEdit() {
+  if (contextPeer.value) {
+    peerStore.openEditDialog(contextPeer.value.id)
+  }
+  closeMenu()
+}
+
+// 复制链接
+function handleCopyLink() {
+  if (!contextPeer.value) return
+  const p = contextPeer.value
+  const link = p.website ? p.website : `perohub://peer/${p.id}`
+  navigator.clipboard?.writeText(link)
+  appStore.showToast('链接已复制', 'success')
+  closeMenu()
+}
+
+// 复制文本
+function handleCopyText() {
+  if (!contextPeer.value) return
+  const p = contextPeer.value
+  const text = [p.name, getTypeLabel(p.type), getCategoryLabel(p.category), p.city].filter(Boolean).join(' · ')
+  navigator.clipboard?.writeText(text)
+  appStore.showToast('文本已复制', 'success')
+  closeMenu()
+}
+
+// 删除对象
+function handleDelete() {
+  if (!contextPeer.value) return
+  const p = contextPeer.value
+  if (confirm(`确定要删除「${p.name}」吗？`)) {
+    peerStore.deletePeer(p.id)
+    appStore.showToast('已删除', 'success')
+    if (peerStore.selectedPeerId === p.id) {
+      appStore.setDetailPanelOpen(false)
+      peerStore.selectPeer(null)
+    }
+  }
+  closeMenu()
+}
+
+// 新建对象（根据当前分类类型打开对应添加面板）
+function handleCreate() {
+  peerStore.openAddDialog(currentCategoryType.value)
+  closeMenu()
+}
 
 // 头像加载失败时回退到本地生成的 SVG 头像
 function onAvatarError(e, peer) {

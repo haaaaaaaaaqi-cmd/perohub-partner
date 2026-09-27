@@ -14,15 +14,31 @@
         >
           <Pencil class="w-3.5 h-3.5" />
         </button>
-        <!-- 删除按钮 -->
-        <button
-          v-if="selectedPeer"
-          class="p-1.5 rounded text-muted-foreground hover:text-destructive hover:bg-accent transition-colors"
-          title="删除"
-          @click="handleDelete"
-        >
-          <Trash2 class="w-3.5 h-3.5" />
-        </button>
+        <!-- 详情面板字段显隐设置 -->
+        <DropdownMenu v-if="selectedPeer" align="end" :side-offset="6">
+          <template #trigger>
+            <button
+              class="p-1.5 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
+              title="详情面板显示设置"
+            >
+              <Settings class="w-3.5 h-3.5" />
+            </button>
+          </template>
+          <DropdownMenuLabel>详情面板显示内容</DropdownMenuLabel>
+          <DropdownMenuItem
+            v-for="field in availableDetailFields"
+            :key="field.id"
+            @select="toggleDetailField(field.id)"
+          >
+            <span class="flex-1">{{ field.label }}</span>
+            <Check v-if="showDetailField(field.id)" class="w-4 h-4 text-primary" />
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem @select="resetDetailFields">
+            <RotateCcw class="w-4 h-4" />
+            <span class="flex-1">恢复默认</span>
+          </DropdownMenuItem>
+        </DropdownMenu>
         <!-- 关闭按钮 -->
         <button
           class="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
@@ -72,22 +88,30 @@
         </div>
 
         <!-- 评分 + 粉丝 统计卡片 -->
-        <div class="px-4 py-3 border-b border-border grid grid-cols-2 gap-3">
-          <div class="text-center">
+        <div
+          v-if="showDetailField('ratingScore') || showDetailField('followers')"
+          class="px-4 py-3 border-b border-border grid gap-3"
+          :class="(showDetailField('ratingScore') && showDetailField('followers')) ? 'grid-cols-2' : 'grid-cols-1'"
+        >
+          <div v-if="showDetailField('ratingScore')" class="text-center">
             <div class="flex items-center justify-center gap-1 mb-0.5">
               <Star class="w-4 h-4 text-amber-500 fill-amber-500" />
               <span class="text-xl font-bold text-foreground tabular-nums">{{ ratingScore }}</span>
             </div>
             <div class="text-xs text-muted-foreground">{{ selectedPeer.rating?.count || 0 }} 人评分</div>
           </div>
-          <div class="text-center border-l border-border">
+          <div
+            v-if="showDetailField('followers')"
+            class="text-center"
+            :class="showDetailField('ratingScore') ? 'border-l border-border' : ''"
+          >
             <div class="text-xl font-bold text-foreground tabular-nums mb-0.5">{{ formatFollowers(selectedPeer.followers) }}</div>
             <div class="text-xs text-muted-foreground">粉丝总数</div>
           </div>
         </div>
 
         <!-- 评分区（五星评星） -->
-        <div class="px-4 py-3 border-b border-border">
+        <div v-if="showDetailField('ratingStars')" class="px-4 py-3 border-b border-border">
           <div class="flex items-center justify-between mb-2">
             <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">我的评分</h4>
           </div>
@@ -130,7 +154,7 @@
         </div>
 
         <!-- 社交媒体 -->
-        <div v-if="selectedPeer.socialMedia?.length" class="px-4 py-3 border-b border-border">
+        <div v-if="showDetailField('socialMedia') && selectedPeer.socialMedia?.length" class="px-4 py-3 border-b border-border">
           <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">社交媒体</h4>
           <div class="space-y-2">
             <div
@@ -153,7 +177,7 @@
         </div>
 
         <!-- 作品案例 -->
-        <div v-if="selectedPeer.works?.length" class="px-4 py-3 border-b border-border">
+        <div v-if="showDetailField('works') && selectedPeer.works?.length" class="px-4 py-3 border-b border-border">
           <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
             作品案例 <span class="text-[10px] font-normal normal-case">(传播 TOP{{ selectedPeer.works.length }})</span>
           </h4>
@@ -176,7 +200,7 @@
         </div>
 
         <!-- 合作案例 -->
-        <div v-if="selectedPeer.cooperations?.length" class="px-4 py-3 border-b border-border">
+        <div v-if="showDetailField('cooperations') && selectedPeer.cooperations?.length" class="px-4 py-3 border-b border-border">
           <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">合作案例</h4>
           <div class="space-y-2">
             <div
@@ -218,7 +242,7 @@
         </div>
 
         <!-- 对接人 -->
-        <div v-if="selectedPeer.handlers?.length" class="px-4 py-3 border-b border-border">
+        <div v-if="showDetailField('handlers') && selectedPeer.handlers?.length" class="px-4 py-3 border-b border-border">
           <h4 class="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">对接人</h4>
           <div class="space-y-1.5">
             <div
@@ -241,7 +265,7 @@
         </div>
 
         <!-- 风险提示 -->
-        <div v-if="selectedPeer.risk" class="px-4 py-3 border-b border-border">
+        <div v-if="showDetailField('risk') && selectedPeer.risk" class="px-4 py-3 border-b border-border">
           <h4 class="text-xs font-semibold text-amber-600 uppercase tracking-wider mb-2 flex items-center gap-1">
             <AlertTriangle class="w-3.5 h-3.5" />
             风险提示
@@ -275,14 +299,18 @@
 <script setup>
 import { computed, ref, watch, markRaw } from 'vue'
 import {
-  Star, X, Pencil, Trash2, MapPin, Copy, AlertTriangle,
-  MessageCircle, Mail, Phone, Globe
+  Star, X, Pencil, MapPin, Copy, AlertTriangle,
+  MessageCircle, Mail, Phone, Globe, Settings, Check, RotateCcw
 } from 'lucide-vue-next'
 import { useAppStore } from '@/store/app'
 import { usePeerStore } from '@/store/peer'
 import { getAvatarDataUri } from '@/lib/utils'
 import Badge from '@/components/ui/Badge.vue'
 import ScrollArea from '@/components/ui/ScrollArea.vue'
+import DropdownMenu from '@/components/ui/DropdownMenu.vue'
+import DropdownMenuItem from '@/components/ui/DropdownMenuItem.vue'
+import DropdownMenuLabel from '@/components/ui/DropdownMenuLabel.vue'
+import DropdownMenuSeparator from '@/components/ui/DropdownMenuSeparator.vue'
 
 const appStore = useAppStore()
 const peerStore = usePeerStore()
@@ -343,14 +371,50 @@ function handleEdit() {
   peerStore.openEditDialog(selectedPeer.value.id)
 }
 
-// 删除
-function handleDelete() {
-  if (!selectedPeer.value) return
-  if (confirm(`确定要删除「${selectedPeer.value.name}」吗？`)) {
-    peerStore.deletePeer(selectedPeer.value.id)
-    appStore.showToast('已删除', 'success')
-    appStore.setDetailPanelOpen(false)
+// ===== 详情面板字段显隐 =====
+
+// 当前分类的详情面板显示字段
+const detailFields = computed(() => peerStore.currentDetailFields())
+
+// 当前拍档类型下可选的详情字段
+const availableDetailFields = computed(() => {
+  const type = selectedPeer.value?.type
+  // DETAIL_FIELDS 定义在 store 中，这里通过 peerStore 类型信息过滤
+  const all = [
+    { id: 'socialMedia', label: '社媒', types: ['person', 'company'] },
+    { id: 'followers', label: '粉丝', types: ['person', 'company'] },
+    { id: 'works', label: '作品案例', types: ['person', 'company'] },
+    { id: 'cooperations', label: '合作案例', types: ['person', 'company'] },
+    { id: 'ratingStars', label: '评星', types: ['person', 'company'] },
+    { id: 'ratingScore', label: '评分', types: ['person', 'company'] },
+    { id: 'risk', label: '风险', types: ['person', 'company'] },
+    { id: 'handlers', label: '联络人', types: ['company'] }
+  ]
+  return all.filter(f => !type || f.types.includes(type))
+})
+
+// 判断某详情字段是否显示
+function showDetailField(fieldId) {
+  return detailFields.value.includes(fieldId)
+}
+
+// 切换某详情字段显隐
+function toggleDetailField(fieldId) {
+  const catId = peerStore.currentCategory
+  const current = [...peerStore.getCategoryDetailFields(catId)]
+  const idx = current.indexOf(fieldId)
+  if (idx === -1) {
+    current.push(fieldId)
+  } else {
+    current.splice(idx, 1)
   }
+  peerStore.updateCategoryDetailFields(catId, current)
+}
+
+// 恢复默认（显示全部可选字段）
+function resetDetailFields() {
+  peerStore.updateCategoryDetailFields(peerStore.currentCategory, availableDetailFields.value.map(f => f.id))
+  appStore.showToast('已恢复默认显示', 'success')
 }
 
 // 复制联系方式
