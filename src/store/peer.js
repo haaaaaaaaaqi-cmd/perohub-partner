@@ -35,7 +35,7 @@ const CATEGORIES = [
 // 分栏配置
 const CATEGORY_GROUPS = [
   { id: 'person', label: '个人', icon: '👤' },
-  { id: 'company', label: '公司', icon: '🏢' }
+  { id: 'company', label: '组织', icon: '🏢' }
 ]
 
 // 社交媒体平台配置
